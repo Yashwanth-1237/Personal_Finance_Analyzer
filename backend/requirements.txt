@@ -1,0 +1,6 @@
+Flask>=3.0,<4
+Flask-SQLAlchemy>=3.1,<4
+SQLAlchemy>=2.0,<3
+PyMySQL>=1.1,<2
+cryptography>=42,<49  # 49+ has no prebuilt Intel-Mac wheels
+python-dotenv>=1.0,<2
