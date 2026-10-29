@@ -27,8 +27,16 @@ class Config:
     if os.getenv("RAILWAY_ENVIRONMENT") and SECRET_KEY == "dev-only-change-me":
         raise RuntimeError("Set a unique SECRET_KEY before deploying.")
 
+    # Hosted PostgreSQL providers may supply either legacy postgres:// or
+    # standard postgresql:// URLs. Pin SQLAlchemy to the psycopg 3 driver.
+    database_url = os.getenv("DATABASE_URL")
+    if database_url and database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif database_url and database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
     # DATABASE_URL overrides MYSQL_* settings (used by tests and hosted databases).
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or _mysql_url()
+    SQLALCHEMY_DATABASE_URI = database_url or _mysql_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 280}
 

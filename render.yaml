@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: personal-expense-analyzer
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: personal-expense-analyzer-db
+          property: connectionString
+      - key: ENABLE_DEMO_SEED
+        value: "false"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+
+databases:
+  - name: personal-expense-analyzer-db
+    plan: free
+    region: oregon
+    databaseName: expense_analyzer
+    user: expense_analyzer
+    postgresMajorVersion: "16"

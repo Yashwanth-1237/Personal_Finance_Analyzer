@@ -26,23 +26,22 @@ A full-stack web app that helps university students record daily spending, set m
 
 Every number comes from the database. Adding, editing or deleting an expense immediately refreshes totals, budgets and charts.
 
-## Deploy the full app on Railway
+## Deploy the full app on Render
 
 The root `Dockerfile` builds the React frontend and serves it, the Flask API, and its
-session cookies from one origin. To deploy:
+session cookies from one origin. The `render.yaml` Blueprint creates the web service
+and PostgreSQL database in the same region. To deploy:
 
-1. Create a Railway project and deploy this GitHub repository as a service.
-2. Add a Railway MySQL service to the project. In the app service's Variables, use
-   Railway's **Add Reference** picker to map the MySQL service's `MYSQLHOST`,
-   `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, and `MYSQLDATABASE` values to
-   `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`.
-3. In the app service's Variables, set `SECRET_KEY` to a unique, long random value
-   and set `ENABLE_DEMO_SEED=false` for a public deployment.
-4. Generate a public domain for the app service. Railway checks `/api/health`
-   before marking a deployment healthy.
+1. In the Render Dashboard, choose **New → Blueprint** and connect this repository.
+2. Review the services and select **Apply**. The Blueprint generates a session
+   secret and connects the app to PostgreSQL automatically.
+3. After the deploy succeeds, open the web service and its `onrender.com` URL.
 
-Do not upload `.env` or use development secrets in production. Railway's generated
-HTTPS domain is used with secure session cookies.
+The Blueprint uses Render's free plans so it does not intentionally select a paid
+instance. Important: Render free web services sleep when idle, and the free
+PostgreSQL database expires 30 days after creation. Upgrade the database before it
+expires to keep user data; Render deletes it after an additional 14-day grace period.
+Do not upload `.env` or use development secrets in production.
 
 ---
 
