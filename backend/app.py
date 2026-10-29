@@ -2,7 +2,7 @@
 import logging
 import os
 
-from flask import Flask, abort, jsonify
+from flask import Flask, abort, jsonify, send_from_directory
 from sqlalchemy.exc import IntegrityError, OperationalError
 from werkzeug.exceptions import HTTPException
 
@@ -20,7 +20,7 @@ def create_app(config_object=Config):
     app = Flask(
         __name__,
         static_folder=static_folder,
-        static_url_path="" if static_folder else None,
+        static_url_path="/assets" if static_folder else None,
     )
     app.config.from_object(config_object)
     db.init_app(app)
@@ -41,6 +41,8 @@ def create_app(config_object=Config):
         def frontend_route(path):
             if path.startswith("api/"):
                 abort(404)
+            if os.path.isfile(os.path.join(static_folder, path)):
+                return send_from_directory(static_folder, path)
             return app.send_static_file("index.html")
 
     @app.errorhandler(ApiError)
