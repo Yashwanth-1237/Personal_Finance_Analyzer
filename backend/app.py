@@ -19,8 +19,7 @@ def create_app(config_object=Config):
 
     app = Flask(
         __name__,
-        static_folder=static_folder,
-        static_url_path="/assets" if static_folder else None,
+        static_folder=None,
     )
     app.config.from_object(config_object)
     db.init_app(app)
@@ -35,7 +34,11 @@ def create_app(config_object=Config):
     if static_folder:
         @app.get("/")
         def index():
-            return app.send_static_file("index.html")
+            return send_from_directory(static_folder, "index.html")
+
+        @app.get("/assets/<path:filename>")
+        def frontend_asset(filename):
+            return send_from_directory(os.path.join(static_folder, "assets"), filename)
 
         @app.get("/<path:path>")
         def frontend_route(path):
@@ -43,7 +46,7 @@ def create_app(config_object=Config):
                 abort(404)
             if os.path.isfile(os.path.join(static_folder, path)):
                 return send_from_directory(static_folder, path)
-            return app.send_static_file("index.html")
+            return send_from_directory(static_folder, "index.html")
 
     @app.errorhandler(ApiError)
     def handle_api_error(exc):
