@@ -26,6 +26,24 @@ A full-stack web app that helps university students record daily spending, set m
 
 Every number comes from the database. Adding, editing or deleting an expense immediately refreshes totals, budgets and charts.
 
+## Deploy the full app on Railway
+
+The root `Dockerfile` builds the React frontend and serves it, the Flask API, and its
+session cookies from one origin. To deploy:
+
+1. Create a Railway project and deploy this GitHub repository as a service.
+2. Add a Railway MySQL service to the project. In the app service's Variables, use
+   Railway's **Add Reference** picker to map the MySQL service's `MYSQLHOST`,
+   `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, and `MYSQLDATABASE` values to
+   `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`.
+3. In the app service's Variables, set `SECRET_KEY` to a unique, long random value
+   and set `ENABLE_DEMO_SEED=false` for a public deployment.
+4. Generate a public domain for the app service. Railway checks `/api/health`
+   before marking a deployment healthy.
+
+Do not upload `.env` or use development secrets in production. Railway's generated
+HTTPS domain is used with secure session cookies.
+
 ---
 
 ## Project structure

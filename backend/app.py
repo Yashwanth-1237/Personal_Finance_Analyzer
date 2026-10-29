@@ -2,7 +2,7 @@
 import logging
 import os
 
-from flask import Flask, jsonify
+from flask import Flask, abort, jsonify
 from sqlalchemy.exc import IntegrityError, OperationalError
 from werkzeug.exceptions import HTTPException
 
@@ -13,7 +13,15 @@ from utils import ApiError, error_response
 
 
 def create_app(config_object=Config):
-    app = Flask(__name__)
+    static_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+    if not os.path.isdir(static_folder):
+        static_folder = None
+
+    app = Flask(
+        __name__,
+        static_folder=static_folder,
+        static_url_path="" if static_folder else None,
+    )
     app.config.from_object(config_object)
     db.init_app(app)
 
@@ -23,6 +31,17 @@ def create_app(config_object=Config):
     @app.get("/api/health")
     def health():
         return jsonify({"status": "ok"})
+
+    if static_folder:
+        @app.get("/")
+        def index():
+            return app.send_static_file("index.html")
+
+        @app.get("/<path:path>")
+        def frontend_route(path):
+            if path.startswith("api/"):
+                abort(404)
+            return app.send_static_file("index.html")
 
     @app.errorhandler(ApiError)
     def handle_api_error(exc):
@@ -65,5 +84,12 @@ def create_app(config_object=Config):
     return app
 
 
+app = create_app()
+
+
 if __name__ == "__main__":
-    create_app().run(host="127.0.0.1", port=int(os.getenv("FLASK_PORT", "5001")), debug=True)
+    app.run(
+        host="127.0.0.1",
+        port=int(os.getenv("FLASK_PORT", "5001")),
+        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
+    )
