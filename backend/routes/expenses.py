@@ -1,9 +1,11 @@
 """CRUD for expenses. A student can only see and change their own rows."""
 from datetime import date, timedelta
+from io import BytesIO
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, g, jsonify, request, send_file
 
-from models import Category, Expense, db
+from models import Category, Expense, ExpenseReceipt, db
+from receipts import MAX_RECEIPT_BYTES, normalize_receipt_image, scan_receipt
 from utils import ApiError, get_json_body, get_user_category, login_required, parse_amount, parse_date
 
 expenses_bp = Blueprint("expenses", __name__)
@@ -44,6 +46,27 @@ def apply_fields(expense, data):
     expense.note = note or None
 
 
+def save_receipt(expense, file):
+    data = file.read(MAX_RECEIPT_BYTES + 1)
+    normalized = normalize_receipt_image(data)
+    receipt = db.session.get(ExpenseReceipt, expense.expense_id)
+    if receipt is None:
+        receipt = ExpenseReceipt(expense_id=expense.expense_id)
+        db.session.add(receipt)
+    receipt.image_data = normalized
+    receipt.content_type = "image/jpeg"
+
+
+@expenses_bp.post("/expenses/scan-receipt")
+@login_required
+def scan_receipt_image():
+    file = request.files.get("receipt")
+    if file is None:
+        raise ApiError("Choose a receipt image to scan.", fields={"receipt": "Image required."})
+    suggestions, _ = scan_receipt(file.read(MAX_RECEIPT_BYTES + 1))
+    return jsonify({"suggestions": suggestions})
+
+
 @expenses_bp.get("/expenses")
 @login_required
 def list_expenses():
@@ -81,8 +104,23 @@ def list_expenses():
         query = query.limit(min(limit, 500))
 
     expenses = query.all()
+    receipt_ids = set()
+    if expenses:
+        receipt_ids = {
+            expense_id
+            for (expense_id,) in db.session.query(ExpenseReceipt.expense_id)
+            .filter(ExpenseReceipt.expense_id.in_([expense.expense_id for expense in expenses]))
+            .all()
+        }
     return jsonify({
-        "expenses": [e.to_dict() for e in expenses],
+        "expenses": [
+            {
+                **expense.to_dict(),
+                "receipt_url": f"/api/expenses/{expense.expense_id}/receipt"
+                if expense.expense_id in receipt_ids else None,
+            }
+            for expense in expenses
+        ],
         "count": len(expenses),
         "total": round(sum(float(e.amount) for e in expenses), 2),
     })
@@ -92,8 +130,13 @@ def list_expenses():
 @login_required
 def create_expense():
     expense = Expense(user_id=g.user.user_id)
-    apply_fields(expense, get_json_body())
+    data = request.form if request.mimetype == "multipart/form-data" else get_json_body()
+    apply_fields(expense, data)
     db.session.add(expense)
+    db.session.flush()
+    receipt_file = request.files.get("receipt")
+    if receipt_file:
+        save_receipt(expense, receipt_file)
     db.session.commit()
     return jsonify({"expense": expense.to_dict()}), 201
 
@@ -108,9 +151,30 @@ def get_expense(expense_id):
 @login_required
 def update_expense(expense_id):
     expense = find_own_expense(expense_id)
-    apply_fields(expense, get_json_body())
+    data = request.form if request.mimetype == "multipart/form-data" else get_json_body()
+    apply_fields(expense, data)
+    receipt_file = request.files.get("receipt")
+    if receipt_file:
+        save_receipt(expense, receipt_file)
     db.session.commit()
     return jsonify({"expense": expense.to_dict()})
+
+
+@expenses_bp.get("/expenses/<int:expense_id>/receipt")
+@login_required
+def get_receipt(expense_id):
+    expense = find_own_expense(expense_id)
+    receipt = db.session.get(ExpenseReceipt, expense.expense_id)
+    if receipt is None:
+        raise ApiError("Receipt not found.", 404)
+    response = send_file(
+        BytesIO(receipt.image_data),
+        mimetype=receipt.content_type,
+        download_name="receipt.jpg",
+        max_age=0,
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @expenses_bp.delete("/expenses/<int:expense_id>")

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, FileImage, ScanLine, X } from 'lucide-react';
 import Modal from './Modal';
 import { api } from '../services/api';
 import { cleanAmountInput, groupDigits, todayIso } from '../services/format';
@@ -17,6 +18,21 @@ export default function ExpenseFormModal({ expense, categories, onClose, onSaved
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [scanMessage, setScanMessage] = useState('');
+  const scanRequestId = useRef(0);
+
+  useEffect(() => {
+    if (!receiptFile) {
+      setReceiptPreview('');
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(receiptFile);
+    setReceiptPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [receiptFile]);
 
   const set = (field) => (e) => {
     const value = field === 'amount' ? groupDigits(e.target.value) : e.target.value;
@@ -35,18 +51,65 @@ export default function ExpenseFormModal({ expense, categories, onClose, onSaved
     return errs;
   };
 
+  const chooseReceipt = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setScanMessage('Choose a JPEG, PNG, or WebP receipt image.');
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      setScanMessage('Receipt images must be no larger than 6 MB.');
+      return;
+    }
+
+    const requestId = ++scanRequestId.current;
+    const formAtScanStart = form;
+    setReceiptFile(file);
+    setScanMessage('Scanning receipt…');
+    setScanning(true);
+    try {
+      const { suggestions } = await api.scanReceipt(file);
+      if (requestId !== scanRequestId.current) return;
+      setForm((current) => ({
+        ...current,
+        ...(suggestions.amount && current.amount === formAtScanStart.amount
+          ? { amount: groupDigits(suggestions.amount) }
+          : {}),
+        ...(suggestions.expense_date && current.expense_date === formAtScanStart.expense_date
+          ? { expense_date: suggestions.expense_date }
+          : {}),
+      }));
+      setScanMessage(suggestions.amount || suggestions.expense_date
+        ? 'Receipt scanned. Check the suggested amount and date before saving.'
+        : 'No amount or date found. You can enter them manually.');
+    } catch (err) {
+      if (requestId === scanRequestId.current) setScanMessage(err.message);
+    } finally {
+      if (requestId === scanRequestId.current) setScanning(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (scanning) return;
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
-    const payload = {
+    const values = {
       amount: Number(cleanAmountInput(form.amount)),
       expense_date: form.expense_date,
       category_id: Number(form.category_id),
       note: form.note.trim(),
     };
+    let payload = values;
+    if (receiptFile) {
+      payload = new FormData();
+      Object.entries(values).forEach(([key, value]) => payload.append(key, value));
+      payload.append('receipt', receiptFile);
+    }
     setSaving(true);
     setFormError('');
     try {
@@ -70,14 +133,46 @@ export default function ExpenseFormModal({ expense, categories, onClose, onSaved
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" form="expense-form" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : editing ? 'Save changes' : 'Save expense'}
+          <button type="submit" form="expense-form" className="btn btn-primary" disabled={saving || scanning}>
+            {scanning ? 'Scanning receipt…' : saving ? 'Saving…' : editing ? 'Save changes' : 'Save expense'}
           </button>
         </>
       }
     >
       <form id="expense-form" onSubmit={handleSubmit} noValidate>
         {formError && <div className="form-alert">{formError}</div>}
+        <div className="field receipt-field">
+          <span>Receipt photo <em className="muted">(optional)</em></span>
+          <div className="receipt-buttons">
+            <label className="btn btn-secondary btn-sm">
+              <Camera size={16} /> Take photo
+              <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+                onChange={chooseReceipt} hidden />
+            </label>
+            <label className="btn btn-secondary btn-sm">
+              <FileImage size={16} /> Upload image
+              <input type="file" accept="image/jpeg,image/png,image/webp"
+                onChange={chooseReceipt} hidden />
+            </label>
+          </div>
+          {receiptPreview ? (
+            <div className="receipt-preview">
+              <img src={receiptPreview} alt="Selected receipt preview" />
+              <button type="button" className="icon-btn" onClick={() => {
+                scanRequestId.current += 1;
+                setReceiptFile(null);
+                setScanning(false);
+                setScanMessage('');
+              }} aria-label="Remove selected receipt">
+                <X size={16} />
+              </button>
+            </div>
+          ) : editing && expense?.receipt_url ? (
+            <a href={expense.receipt_url} target="_blank" rel="noreferrer">View saved receipt</a>
+          ) : null}
+          {scanning && <small className="hint"><ScanLine size={14} /> Reading amount and date…</small>}
+          {scanMessage && !scanning && <small className="hint">{scanMessage}</small>}
+        </div>
 
         <label className="field">
           <span>Amount</span>

@@ -7,13 +7,18 @@ import sys
 import tempfile
 import unittest
 from datetime import date
+from io import BytesIO
+from unittest.mock import patch
+
+from PIL import Image
 
 DB_FILE = os.path.join(tempfile.gettempdir(), "expense_analyzer_test.db")
 os.environ["DATABASE_URL"] = f"sqlite:///{DB_FILE}"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app  # noqa: E402
-from models import db  # noqa: E402
+from models import ExpenseReceipt, PasswordReset, db  # noqa: E402
+from receipts import _extract_amount, _extract_date  # noqa: E402
 
 TODAY = date.today()
 PERIOD = {"month": TODAY.month, "year": TODAY.year}
@@ -169,6 +174,81 @@ class ExpenseAnalyzerTest(unittest.TestCase):
         s = self.client.get("/api/analytics/summary", query_string=PERIOD).get_json()
         self.assertGreater(s["total_spent"], 0)
         self.assertEqual(s["monthly_budget"], 600000)
+
+    def test_password_reset_link_is_one_time(self):
+        self.register()
+        self.app.config.update({
+            "SMTP_HOST": "smtp.example.com",
+            "SMTP_FROM": "noreply@example.com",
+            "SMTP_USERNAME": "smtp-user",
+            "SMTP_PASSWORD": "smtp-password",
+        })
+        with patch("routes.auth.send_password_reset_email") as send_email:
+            response = self.client.post("/api/forgot-password", json={"email": "minji@wsu.ac.kr"})
+            unknown_response = self.client.post(
+                "/api/forgot-password", json={"email": "unknown@wsu.ac.kr"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(unknown_response.get_json(), response.get_json())
+        self.assertEqual(send_email.call_count, 1)
+        token = send_email.call_args.args[1]
+        with self.app.app_context():
+            reset = PasswordReset.query.first()
+            self.assertIsNotNone(reset)
+            self.assertNotEqual(reset.token_hash, token)
+
+        response = self.client.post("/api/reset-password", json={
+            "token": token, "password": "newpassword456"})
+        self.assertEqual(response.status_code, 200)
+        with self.app.app_context():
+            self.assertEqual(PasswordReset.query.count(), 0)
+        self.assertEqual(self.client.post("/api/reset-password", json={
+            "token": token, "password": "anotherpassword789"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/login", json={
+            "email": "minji@wsu.ac.kr", "password": "newpassword456"}).status_code, 200)
+
+    def test_receipt_image_is_private_and_scan_suggestions_are_returned(self):
+        self.register()
+        food = self.category_id("Food")
+        image = BytesIO()
+        Image.new("RGB", (20, 20), color="white").save(image, format="JPEG")
+        image_bytes = image.getvalue()
+
+        with patch("routes.expenses.scan_receipt", return_value=(
+            {"amount": 12500, "expense_date": "2026-10-29"}, image_bytes,
+        )):
+            response = self.client.post("/api/expenses/scan-receipt", data={
+                "receipt": (BytesIO(image_bytes), "receipt.jpg"),
+            }, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["suggestions"], {
+            "amount": 12500, "expense_date": "2026-10-29",
+        })
+
+        response = self.client.post("/api/expenses", data={
+            "amount": "12500",
+            "expense_date": TODAY.isoformat(),
+            "category_id": str(food),
+            "note": "Lunch",
+            "receipt": (BytesIO(image_bytes), "receipt.jpg"),
+        }, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 201)
+        expense_id = response.get_json()["expense"]["expense_id"]
+        with self.app.app_context():
+            self.assertEqual(db.session.query(ExpenseReceipt).count(), 1)
+        self.assertEqual(self.client.get("/api/expenses").get_json()["expenses"][0]["receipt_url"],
+                         f"/api/expenses/{expense_id}/receipt")
+        response = self.client.get(f"/api/expenses/{expense_id}/receipt")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "image/jpeg")
+
+        other = self.app.test_client()
+        self.register(other, email="jisoo@wsu.ac.kr")
+        self.assertEqual(other.get(f"/api/expenses/{expense_id}/receipt").status_code, 404)
+
+    def test_receipt_scan_extracts_labeled_total_and_date(self):
+        text = "2026. 10. 29\nFood 4,000\nTOTAL 12,500"
+        self.assertEqual(_extract_date(text), "2026-10-29")
+        self.assertEqual(_extract_amount(text), 12500)
 
 
 if __name__ == "__main__":

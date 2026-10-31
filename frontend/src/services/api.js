@@ -26,12 +26,13 @@ async function request(method, path, body, { query, skipAuthRedirect } = {}) {
   }
 
   let response;
+  const isFormData = body instanceof FormData;
   try {
     response = await fetch(url, {
       method,
       credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: body && !isFormData ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
     });
   } catch {
     throw new ApiError('Cannot reach the server. Is the Flask backend running on port 5001?', 0);
@@ -60,6 +61,8 @@ export const api = {
   // Auth
   register: (payload) => request('POST', '/register', payload, { skipAuthRedirect: true }),
   login: (payload) => request('POST', '/login', payload, { skipAuthRedirect: true }),
+  forgotPassword: (email) => request('POST', '/forgot-password', { email }, { skipAuthRedirect: true }),
+  resetPassword: (payload) => request('POST', '/reset-password', payload, { skipAuthRedirect: true }),
   logout: () => request('POST', '/logout'),
   me: () => request('GET', '/me', null, { skipAuthRedirect: true }),
   updateProfile: (payload) => request('PUT', '/me', payload),
@@ -70,6 +73,11 @@ export const api = {
   createExpense: (payload) => request('POST', '/expenses', payload),
   updateExpense: (id, payload) => request('PUT', `/expenses/${id}`, payload),
   deleteExpense: (id) => request('DELETE', `/expenses/${id}`),
+  scanReceipt: (file) => {
+    const body = new FormData();
+    body.append('receipt', file);
+    return request('POST', '/expenses/scan-receipt', body);
+  },
 
   // Categories
   listCategories: () => request('GET', '/categories'),

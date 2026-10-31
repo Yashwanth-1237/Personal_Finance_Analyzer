@@ -100,6 +100,26 @@ input[type='date'] { min-height: 42px; }
   margin-bottom: 16px;
   font-size: 0.9rem;
 }
+.login-recovery { margin-top: 6px; }
+.login-recovery a { font-weight: 700; text-decoration: underline; }
+.form-success {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+.receipt-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.receipt-preview { display: flex; align-items: flex-start; gap: 8px; }
+.receipt-preview img {
+  max-width: 180px;
+  max-height: 180px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.receipt-field .hint { display: flex; align-items: center; gap: 5px; }
 
 .input-prefix, .input-suffix {
   display: flex;

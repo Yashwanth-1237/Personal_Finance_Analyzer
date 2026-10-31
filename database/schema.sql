@@ -26,6 +26,24 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE = InnoDB;
 
 -- ------------------------------------------------------------
+-- Password resets: one-time, expiring token hashes
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS password_resets (
+  reset_id       INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id        INT UNSIGNED NOT NULL,
+  token_hash     CHAR(64)     NOT NULL,
+  expires_at     DATETIME     NOT NULL,
+  created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (reset_id),
+  UNIQUE KEY uq_password_resets_token_hash (token_hash),
+  KEY idx_password_resets_user_id (user_id),
+  KEY idx_password_resets_expires_at (expires_at),
+  CONSTRAINT fk_password_resets_user
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
+    ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- ------------------------------------------------------------
 -- Categories: user_id IS NULL  -> system default (shared by everyone)
 --             user_id NOT NULL -> custom category owned by one student
 -- ------------------------------------------------------------
@@ -64,6 +82,20 @@ CREATE TABLE IF NOT EXISTS expenses (
   -- The API moves a category's expenses to "Other" before deleting it.
   CONSTRAINT fk_expenses_category
     FOREIGN KEY (category_id) REFERENCES categories (category_id)
+    ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- ------------------------------------------------------------
+-- Receipt images: one private normalized JPEG per expense
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS expense_receipts (
+  expense_id     INT UNSIGNED NOT NULL,
+  image_data     LONGBLOB     NOT NULL,
+  content_type   VARCHAR(32)  NOT NULL,
+  uploaded_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (expense_id),
+  CONSTRAINT fk_expense_receipts_expense
+    FOREIGN KEY (expense_id) REFERENCES expenses (expense_id)
     ON DELETE CASCADE
 ) ENGINE = InnoDB;
 

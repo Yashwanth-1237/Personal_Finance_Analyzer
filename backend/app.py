@@ -22,6 +22,7 @@ def create_app(config_object=Config):
         static_folder=None,
     )
     app.config.from_object(config_object)
+    app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
     db.init_app(app)
 
     for blueprint in ALL_BLUEPRINTS:

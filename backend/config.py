@@ -50,3 +50,12 @@ class Config:
 
     # Lets the "Load demo data" button in Settings work. Set to false to disable.
     ENABLE_DEMO_SEED = os.getenv("ENABLE_DEMO_SEED", "true").lower() == "true"
+
+    # SMTP is required for password-reset email delivery.
+    SMTP_HOST = os.getenv("SMTP_HOST", "")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM = os.getenv("SMTP_FROM", "")
+    SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+    APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:5173")

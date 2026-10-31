@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Image, Pencil, Trash2 } from 'lucide-react';
 import { CategoryIcon } from './ui';
 import { formatDate, formatWon } from '../services/format';
 import { useAppData } from '../context/AppDataContext';
@@ -19,6 +19,12 @@ export default function TransactionList({ expenses, onEdit, onDelete, compact = 
           <span className="txn-amount">-{formatWon(e.amount)}</span>
           {(onEdit || onDelete) && (
             <div className="txn-actions">
+              {e.receipt_url && (
+                <a className="icon-btn" href={e.receipt_url} target="_blank" rel="noreferrer"
+                  aria-label="View receipt" title="View receipt">
+                  <Image size={16} />
+                </a>
+              )}
               {onEdit && (
                 <button className="icon-btn" onClick={() => onEdit(e)} aria-label="Edit expense" title="Edit">
                   <Pencil size={16} />

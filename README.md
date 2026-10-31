@@ -15,9 +15,9 @@ A full-stack web app that helps university students record daily spending, set m
 
 ## Features
 
-- **Accounts**: register, log in, log out, change name and password. Each student can only see their own data; the server checks this on every request.
+- **Accounts**: register, log in, log out, change name and password, and reset a forgotten password by email. Each student can only see their own data; the server checks this on every request.
 - **Dashboard**: four summary cards (total spent this month, monthly budget, remaining budget, % used), budget alerts, a spending-by-category doughnut chart, a 6-month trend line, category budget progress and recent transactions.
-- **Expenses**: add, edit and delete expenses. View the full history, search by description or category, filter by category and date range (with quick presets).
+- **Expenses**: add, edit and delete expenses. Take a receipt photo or upload an image; the app can suggest its amount and date. View the full history, search by description or category, and filter by category and date range (with quick presets).
 - **Categories**: seven defaults (Food, Transportation, Shopping, Study, Entertainment, Housing, Other) plus your own custom categories.
 - **Budgets**: an overall monthly budget plus per-category budgets, with remaining money, % used and status. Warnings appear at 80% and when a budget is exceeded, e.g. *"Warning: Your Food budget has been exceeded by ₩4,000."* You can also copy last month's budgets.
 - **Reports**: monthly summary, highest spending category, budget vs actual (chart and table), a 6- or 12-month trend, and **CSV export** (opens correctly in Excel).
@@ -36,6 +36,17 @@ and PostgreSQL database in the same region. To deploy:
 2. Review the services and select **Apply**. The Blueprint generates a session
    secret and connects the app to PostgreSQL automatically.
 3. After the deploy succeeds, open the web service and its `onrender.com` URL.
+4. To enable forgot-password emails, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+   `SMTP_PASSWORD`, and `SMTP_FROM` in the Render web service's Environment page.
+   Use an SMTP app password or provider credential, not your personal email password.
+   Set `APP_BASE_URL` to the service URL shown by Render.
+
+Receipt images are normalized, stored with their expense in PostgreSQL, and scanned
+for an amount/date using English and Korean Tesseract OCR. OCR suggestions should be
+checked before saving. The Docker image includes Tesseract and Korean language data;
+for local development, install Tesseract with English and Korean language data to
+enable scanning. Saving an image and entering its details manually still works
+without OCR. Do not upload sensitive documents.
 
 The Blueprint uses Render's free plans so it does not intentionally select a paid
 instance. Important: Render free web services sleep when idle, and the free
@@ -52,7 +63,7 @@ personal-expense-analyzer/
 ├── backend/
 │   ├── app.py              # Flask app factory + entry point (python app.py)
 │   ├── config.py           # Settings loaded from .env
-│   ├── models.py           # SQLAlchemy models (Users, Categories, Expenses, Budgets)
+│   ├── models.py           # SQLAlchemy models (Users, Categories, Expenses, Receipts, Password Resets, Budgets)
 │   ├── calculations.py     # Budget usage, alerts, category & monthly analytics
 │   ├── utils.py            # Auth guard, validation helpers, date helpers
 │   ├── routes/
@@ -125,9 +136,9 @@ Check that it worked:
 mysql -u root -p -e "USE expense_analyzer; SHOW TABLES; SELECT * FROM categories;"
 ```
 
-You should see 4 tables (`budgets`, `categories`, `expenses`, `users`) and 7 default categories.
+You should see 6 tables (`budgets`, `categories`, `expenses`, `expense_receipts`, `password_resets`, `users`) and 7 default categories.
 
-> **Created your database with an older copy of `schema.sql`?** Upgrade it (your data is kept):
+> **Updating an existing database?** Re-run the current `schema.sql` to add new tables without changing existing data. If your database predates the cascade-delete fix, also run:
 > `Get-Content database\migrations\001_fix_cascade_deletes.sql | mysql -u root -p`
 
 ---
@@ -235,20 +246,24 @@ python -m unittest discover tests -v
 
 ## REST API reference
 
-All responses are JSON. Errors look like `{"error": "message", "fields": {"amount": "..."}}`.
-Every endpoint except register/login/logout requires login (otherwise `401`).
+All responses are JSON except receipt image downloads. Errors look like `{"error": "message", "fields": {"amount": "..."}}`.
+Every endpoint except register/login/logout/forgot-password/reset-password requires login (otherwise `401`).
 
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/api/register` | `{full_name, email, password}` → 201, logs in |
 | POST | `/api/login` | `{email, password}` → 200 / 401 |
 | POST | `/api/logout` | Ends the session |
+| POST | `/api/forgot-password` | `{email}`; emails a one-time reset link when SMTP is configured |
+| POST | `/api/reset-password` | `{token, password}`; consumes a valid, unexpired reset link |
 | GET | `/api/me` | Current user |
 | PUT | `/api/me` | Update `{full_name}` |
 | PUT | `/api/me/password` | `{current_password, new_password}` |
 | GET | `/api/expenses` | Filters: `search`, `category_id`, `start_date`, `end_date`, `limit` |
-| POST | `/api/expenses` | `{amount, expense_date, category_id, note}` → 201 |
-| PUT | `/api/expenses/:id` | Update an expense (404 if it isn't yours) |
+| POST | `/api/expenses/scan-receipt` | Multipart `receipt` image; returns suggested amount/date |
+| POST | `/api/expenses` | `{amount, expense_date, category_id, note}`; optional multipart `receipt` → 201 |
+| PUT | `/api/expenses/:id` | Update an expense; optional multipart `receipt` replaces its image (404 if it isn't yours) |
+| GET | `/api/expenses/:id/receipt` | Download the expense's private receipt image |
 | DELETE | `/api/expenses/:id` | Delete an expense |
 | GET | `/api/categories` | Default + your custom categories |
 | POST | `/api/categories` | `{category_name}` → 201 / 409 duplicate |
@@ -269,7 +284,9 @@ Every endpoint except register/login/logout requires login (otherwise `401`).
 
 - **users**: `user_id` PK, unique `email`, `password_hash` (never the plain password).
 - **categories**: `user_id` NULL = shared default; otherwise owned by one user (FK, cascade delete). Unique `(user_id, category_name)`.
-- **expenses**: FK to `users` (cascade) and `categories` (restrict). `CHECK amount > 0`. Index on `(user_id, expense_date)` for fast monthly queries.
+- **expenses**: FK to `users` and `categories` (cascade). The API moves expenses to "Other" before deleting a custom category. `CHECK amount > 0`. Index on `(user_id, expense_date)` for fast monthly queries.
+- **expense_receipts**: one normalized JPEG per expense, deleted when its expense is deleted. Receipt images are served only to their owner.
+- **password_resets**: hashed, one-time reset tokens with an expiration and cascading user deletion.
 - **budgets**: `category_id` NULL = overall monthly budget. `CHECK` on month 1–12 and amount > 0. A generated `category_key` column makes `UNIQUE (user_id, category_key, month, year)` work, so there is only one budget per category (and one overall budget) per month.
 
 ---

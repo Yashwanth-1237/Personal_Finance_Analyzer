@@ -17,6 +17,8 @@ services:
         value: "false"
       - key: SESSION_COOKIE_SECURE
         value: "true"
+      - key: APP_BASE_URL
+        value: https://personal-expense-analyzer-8wrl.onrender.com
 
 databases:
   - name: personal-expense-analyzer-db

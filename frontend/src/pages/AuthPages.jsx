@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, PieChart, ShieldCheck, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BrandMark } from '../components/Illustrations';
+import { api } from '../services/api';
 
 function AuthShell({ title, subtitle, children }) {
   return (
@@ -69,6 +70,7 @@ export function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to="/dashboard" replace />;
@@ -76,6 +78,8 @@ export function LoginPage() {
   const set = (field) => (e) => {
     setForm((f) => ({ ...f, [field]: e.target.value }));
     setErrors((errs) => ({ ...errs, [field]: undefined }));
+    setFormError('');
+    setShowPasswordRecovery(false);
   };
 
   const submit = async (e) => {
@@ -88,11 +92,13 @@ export function LoginPage() {
 
     setBusy(true);
     setFormError('');
+    setShowPasswordRecovery(false);
     try {
       await login(form.email.trim(), form.password);
       navigate(location.state?.from || '/dashboard', { replace: true });
     } catch (err) {
       setFormError(err.message);
+      setShowPasswordRecovery(err.status === 401);
     } finally {
       setBusy(false);
     }
@@ -101,7 +107,21 @@ export function LoginPage() {
   return (
     <AuthShell title="Welcome back" subtitle="Log in to see your spending dashboard.">
       <form onSubmit={submit} noValidate className="auth-form">
-        {formError && <div className="form-alert">{formError}</div>}
+        {location.state?.resetComplete && (
+          <div className="form-success">Password updated. You can now sign in.</div>
+        )}
+        {formError && (
+          <div className="form-alert">
+            {formError}
+            {showPasswordRecovery && (
+              <div className="login-recovery">
+                Forgot your password? <Link to="/forgot-password" state={{ email: form.email.trim() }}>
+                  Reset it here
+                </Link>.
+              </div>
+            )}
+          </div>
+        )}
         <label className="field">
           <span>Email</span>
           <input type="email" value={form.email} onChange={set('email')} autoComplete="email"
@@ -117,7 +137,114 @@ export function LoginPage() {
         <button className="btn btn-primary btn-block" disabled={busy}>
           {busy ? 'Logging in…' : 'Log in'}
         </button>
+        <p className="auth-switch">
+          <Link to="/forgot-password" state={{ email: form.email.trim() }}>Forgot password?</Link>
+        </p>
         <p className="auth-switch">New here? <Link to="/register">Create an account</Link></p>
+      </form>
+    </AuthShell>
+  );
+}
+
+export function ForgotPasswordPage() {
+  const location = useLocation();
+  const [email, setEmail] = useState(location.state?.email || '');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    if (!EMAIL_RE.test(email.trim())) {
+      setError('Enter a valid email address.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const result = await api.forgotPassword(email.trim());
+      setMessage(result.message);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <AuthShell title="Reset your password" subtitle="We’ll email you a secure, one-time reset link.">
+      <form onSubmit={submit} noValidate className="auth-form">
+        {error && <div className="form-alert">{error}</div>}
+        {message && <div className="form-success">{message}</div>}
+        <label className="field">
+          <span>Email</span>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email" placeholder="you@wsu.ac.kr" autoFocus />
+        </label>
+        <button className="btn btn-primary btn-block" disabled={busy}>
+          {busy ? 'Sending…' : 'Send reset link'}
+        </button>
+        <p className="auth-switch"><Link to="/login">Back to log in</Link></p>
+      </form>
+    </AuthShell>
+  );
+}
+
+export function ResetPasswordPage() {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      setError('Use at least 8 characters with a letter and a number.');
+      return;
+    }
+    if (password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (!token) {
+      setError('This password reset link is invalid or has expired.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await api.resetPassword({ token, password });
+      navigate('/login', { replace: true, state: { resetComplete: true } });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <AuthShell title="Choose a new password" subtitle="Use at least 8 characters with a letter and a number.">
+      <form onSubmit={submit} noValidate className="auth-form">
+        {error && <div className="form-alert">{error}</div>}
+        <label className="field">
+          <span>New password</span>
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password" placeholder="At least 8 characters" />
+        </label>
+        <label className="field">
+          <span>Confirm new password</span>
+          <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password" placeholder="Repeat your password" />
+        </label>
+        <button className="btn btn-primary btn-block" disabled={busy}>
+          {busy ? 'Updating…' : 'Update password'}
+        </button>
       </form>
     </AuthShell>
   );
