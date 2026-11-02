@@ -7,13 +7,13 @@ import { formatCompactWon, formatWon } from '../../services/format';
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Filler, Legend, Tooltip);
 
 export const INK = {
-  primary: '#0f172a',
-  secondary: '#52514e',
-  muted: '#898781',
-  grid: '#e1e0d9',
-  baseline: '#c3c2b7',
-  navy: '#0f2747',
-  emerald: '#059669',
+  primary: '#f3f5fa',
+  secondary: '#b6becc',
+  muted: '#8993a4',
+  grid: '#2a303c',
+  baseline: '#414959',
+  navy: '#456dff',
+  emerald: '#c8f34a',
 };
 
 ChartJS.defaults.font.family = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -25,10 +25,10 @@ ChartJS.defaults.plugins.legend.labels.usePointStyle = true;
 ChartJS.defaults.plugins.legend.labels.color = INK.secondary;
 
 export const tooltipStyle = {
-  backgroundColor: '#ffffff',
+  backgroundColor: '#11141b',
   titleColor: INK.primary,
   bodyColor: INK.secondary,
-  borderColor: 'rgba(15, 23, 42, 0.12)',
+  borderColor: '#414959',
   borderWidth: 1,
   padding: 10,
   cornerRadius: 8,
@@ -49,4 +49,3 @@ export const categoryAxis = {
   border: { color: INK.baseline },
   ticks: { color: INK.secondary },
 };
-

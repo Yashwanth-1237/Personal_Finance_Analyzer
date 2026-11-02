@@ -6,16 +6,16 @@ import {
 // A category keeps its colour everywhere (charts, badges) because the colour
 // follows the category's position in the category list, never its spending rank.
 export const SERIES_COLORS = [
-  '#2a78d6', // blue
-  '#eb6834', // orange
-  '#1baf7a', // aqua
-  '#eda100', // yellow
-  '#e87ba4', // magenta
-  '#008300', // green
-  '#4a3aa7', // violet
-  '#e34948', // red
+  '#456dff', // cobalt
+  '#c8f34a', // acid lime
+  '#3dd6c6', // aqua
+  '#ffc857', // amber
+  '#ff7ca8', // pink
+  '#8ee06b', // green
+  '#a98bff', // violet
+  '#ff6b73', // red
 ];
-export const FOLDED_COLOR = '#a8a7a1'; // 9th+ custom categories share a neutral grey
+export const FOLDED_COLOR = '#8993a4'; // 9th+ custom categories share a neutral grey
 
 const ICONS = {
   Food: UtensilsCrossed,

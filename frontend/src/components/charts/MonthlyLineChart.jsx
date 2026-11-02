@@ -14,16 +14,16 @@ export default function MonthlyLineChart({ months }) {
     pointRadius: 4,
     pointHoverRadius: 6,
     pointBackgroundColor: INK.navy,
-    pointBorderColor: '#ffffff',
+    pointBorderColor: '#11141b',
     pointBorderWidth: 2,
     cubicInterpolationMode: 'monotone', // smooth without overshooting real values
     fill: true,
     backgroundColor: (ctx) => {
       const { chart } = ctx;
-      if (!chart.chartArea) return 'rgba(15, 39, 71, 0.08)';
+      if (!chart.chartArea) return 'rgba(69, 109, 255, 0.12)';
       const g = chart.ctx.createLinearGradient(0, chart.chartArea.top, 0, chart.chartArea.bottom);
-      g.addColorStop(0, 'rgba(15, 39, 71, 0.16)');
-      g.addColorStop(1, 'rgba(15, 39, 71, 0)');
+      g.addColorStop(0, 'rgba(69, 109, 255, 0.28)');
+      g.addColorStop(1, 'rgba(69, 109, 255, 0)');
       return g;
     },
   }];

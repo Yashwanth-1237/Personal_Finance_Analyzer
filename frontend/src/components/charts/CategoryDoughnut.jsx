@@ -33,7 +33,7 @@ export default function CategoryDoughnut({ rows }) {
     datasets: [{
       data: slices.map((s) => s.value),
       backgroundColor: slices.map((s) => s.color),
-      borderColor: '#ffffff',
+      borderColor: '#11141b',
       borderWidth: 2,
       hoverOffset: 6,
     }],
