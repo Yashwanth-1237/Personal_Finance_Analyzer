@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { Eye, EyeOff, PieChart, ShieldCheck, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BrandMark } from '../components/Illustrations';
+import ThemeToggle from '../components/ThemeToggle';
 import { api } from '../services/api';
 
 function AuthShell({ title, subtitle, children }) {
@@ -32,6 +33,7 @@ function AuthShell({ title, subtitle, children }) {
         </div>
       </section>
       <section className="auth-form-side">
+        <div className="auth-theme-toggle"><ThemeToggle /></div>
         <div className="auth-card">
           <h1>{title}</h1>
           <p className="muted">{subtitle}</p>

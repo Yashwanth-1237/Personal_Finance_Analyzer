@@ -1,9 +1,12 @@
 import { Bar } from 'react-chartjs-2';
-import { categoryAxis, INK, tooltipStyle, wonAxis } from './chartSetup';
+import { createChartTheme } from './chartSetup';
 import { formatWon } from '../../services/format';
+import { useTheme } from '../../context/ThemeContext';
 
 /** Spent vs budget for each category (one shared ₩ axis). */
 export default function CategoryBarChart({ rows }) {
+  const { theme } = useTheme();
+  const { INK, categoryAxis, tooltipStyle, wonAxis } = createChartTheme(theme);
   const sorted = [...rows].sort((a, b) => a.category_id - b.category_id);
   const hasBudgets = sorted.some((r) => r.budget);
 
@@ -20,8 +23,8 @@ export default function CategoryBarChart({ rows }) {
     datasets.push({
       label: 'Budget',
       data: sorted.map((r) => r.budget ?? null),
-      backgroundColor: '#c8f34a',
-      hoverBackgroundColor: '#dcff69',
+      backgroundColor: INK.emerald,
+      hoverBackgroundColor: theme === 'dark' ? '#dcff69' : '#8ead32',
       borderRadius: 4,
       borderSkipped: 'start',
       maxBarThickness: 28,
@@ -35,7 +38,7 @@ export default function CategoryBarChart({ rows }) {
     datasets: { bar: { categoryPercentage: 0.7, barPercentage: 0.9 } },
     scales: { x: categoryAxis, y: wonAxis },
     plugins: {
-      legend: { display: hasBudgets, position: 'top', align: 'end' },
+      legend: { display: hasBudgets, position: 'top', align: 'end', labels: { color: INK.secondary } },
       tooltip: {
         ...tooltipStyle,
         callbacks: {

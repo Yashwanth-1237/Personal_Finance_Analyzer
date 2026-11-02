@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAppData } from '../context/AppDataContext';
 import { BrandMark } from './Illustrations';
 import MonthPicker from './MonthPicker';
+import ThemeToggle from './ThemeToggle';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, monthly: true },
@@ -86,6 +87,7 @@ export default function Layout() {
           <h1 className="topbar-title">{current?.label || 'Expense Analyzer'}</h1>
           <div className="topbar-actions">
             {current?.monthly && <MonthPicker />}
+            <ThemeToggle />
             <button className="btn btn-primary" onClick={() => openExpenseForm()}>
               <Plus size={18} />
               <span className="hide-sm">Add expense</span>

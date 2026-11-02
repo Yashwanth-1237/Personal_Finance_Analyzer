@@ -1,12 +1,15 @@
 import { Doughnut } from 'react-chartjs-2';
-import { tooltipStyle } from './chartSetup';
+import { createChartTheme } from './chartSetup';
 import { FOLDED_COLOR } from '../../services/categoryStyle';
 import { formatPercent, formatWon } from '../../services/format';
 import { useAppData } from '../../context/AppDataContext';
+import { useTheme } from '../../context/ThemeContext';
 
 /** Spending share by category, with a total in the centre and a labelled legend. */
 export default function CategoryDoughnut({ rows }) {
   const { colorFor } = useAppData();
+  const { theme } = useTheme();
+  const { chartSurface, tooltipStyle } = createChartTheme(theme);
 
   // Keep category order (by id) so colours stay stable; fold 9th+ categories together.
   const slices = [];
@@ -33,7 +36,7 @@ export default function CategoryDoughnut({ rows }) {
     datasets: [{
       data: slices.map((s) => s.value),
       backgroundColor: slices.map((s) => s.color),
-      borderColor: '#11141b',
+      borderColor: chartSurface,
       borderWidth: 2,
       hoverOffset: 6,
     }],

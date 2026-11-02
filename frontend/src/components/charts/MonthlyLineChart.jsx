@@ -1,9 +1,13 @@
 import { Line } from 'react-chartjs-2';
-import { categoryAxis, INK, tooltipStyle, wonAxis } from './chartSetup';
+import { createChartTheme } from './chartSetup';
 import { formatWon, monthLabel } from '../../services/format';
+import { useTheme } from '../../context/ThemeContext';
 
 /** Monthly spending trend, with the overall budget as a dashed reference line. */
 export default function MonthlyLineChart({ months }) {
+  const { theme } = useTheme();
+  const { INK, chartSurface, fillFallback, fillTop, categoryAxis, wonAxis, tooltipStyle } =
+    createChartTheme(theme);
   const hasBudgets = months.some((m) => m.budget);
 
   const datasets = [{
@@ -14,15 +18,15 @@ export default function MonthlyLineChart({ months }) {
     pointRadius: 4,
     pointHoverRadius: 6,
     pointBackgroundColor: INK.navy,
-    pointBorderColor: '#11141b',
+    pointBorderColor: chartSurface,
     pointBorderWidth: 2,
     cubicInterpolationMode: 'monotone', // smooth without overshooting real values
     fill: true,
     backgroundColor: (ctx) => {
       const { chart } = ctx;
-      if (!chart.chartArea) return 'rgba(69, 109, 255, 0.12)';
+      if (!chart.chartArea) return fillFallback;
       const g = chart.ctx.createLinearGradient(0, chart.chartArea.top, 0, chart.chartArea.bottom);
-      g.addColorStop(0, 'rgba(69, 109, 255, 0.28)');
+      g.addColorStop(0, fillTop);
       g.addColorStop(1, 'rgba(69, 109, 255, 0)');
       return g;
     },
@@ -48,7 +52,7 @@ export default function MonthlyLineChart({ months }) {
     interaction: { mode: 'index', intersect: false },
     scales: { x: categoryAxis, y: wonAxis },
     plugins: {
-      legend: { display: hasBudgets, position: 'top', align: 'end' },
+      legend: { display: hasBudgets, position: 'top', align: 'end', labels: { color: INK.secondary } },
       tooltip: {
         ...tooltipStyle,
         callbacks: {

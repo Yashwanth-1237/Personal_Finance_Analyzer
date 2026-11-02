@@ -12,6 +12,7 @@
   --emerald-500: #c8f34a;
   --emerald-400: #dcff69;
   --emerald-50: #252d13;
+  --link-color: #dcff69;
   --cobalt: #456dff;
   --cobalt-hover: #5a7eff;
   --cobalt-soft: #1b2850;
@@ -24,6 +25,7 @@
   --text: #f3f5fa;
   --text-2: #b6becc;
   --text-3: #8993a4;
+  --topbar-bg: rgba(9, 11, 16, 0.88);
 
   --ok: #c8f34a;
   --ok-bg: #252d13;
@@ -43,6 +45,41 @@
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+:root[data-theme='light'] {
+  color-scheme: light;
+  --navy-900: #10172a;
+  --navy-800: #17213a;
+  --navy-700: #243659;
+  --navy-100: #e6ecfb;
+  --emerald-600: #4d690d;
+  --emerald-500: #9ac52c;
+  --emerald-400: #5a760e;
+  --emerald-50: #edf4da;
+  --link-color: #345be8;
+
+  --bg: #f3f5fa;
+  --surface: #ffffff;
+  --surface-2: #f7f8fc;
+  --border: #dce1ec;
+  --text: #111827;
+  --text-2: #465166;
+  --text-3: #69758a;
+  --topbar-bg: rgba(243, 245, 250, 0.9);
+
+  --ok: #5a760e;
+  --ok-bg: #edf4da;
+  --ok-text: #435b0b;
+  --warn: #a76a00;
+  --warn-bg: #fff4d8;
+  --warn-text: #754a00;
+  --danger: #c8394b;
+  --danger-bg: #fdecef;
+  --danger-text: #9e2535;
+
+  --shadow: 0 1px 3px rgba(20, 32, 58, 0.05), 0 6px 20px rgba(20, 32, 58, 0.06);
+  --shadow-lg: 0 12px 40px rgba(20, 32, 58, 0.2);
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body {
@@ -58,7 +95,7 @@ h1, h2, h3 { margin: 0; line-height: 1.25; letter-spacing: -0.01em; }
 h2 { font-size: 1.4rem; font-weight: 700; }
 h3 { font-size: 1.02rem; font-weight: 600; }
 p { margin: 0; }
-a { color: var(--emerald-600); text-decoration: none; font-weight: 500; }
+a { color: var(--link-color); text-decoration: none; font-weight: 500; }
 a:hover { text-decoration: underline; }
 ul { margin: 0; padding: 0; list-style: none; }
 button { font: inherit; cursor: pointer; }
@@ -195,7 +232,7 @@ input[type='date'] { min-height: 42px; }
   position: fixed;
   inset: 0 auto 0 0;
   width: var(--sidebar-w);
-  background: linear-gradient(180deg, var(--navy-800) 0%, var(--navy-900) 100%);
+  background: linear-gradient(180deg, #0d111a 0%, #080a0f 100%);
   color: #c0c8d8;
   display: flex;
   flex-direction: column;
@@ -238,7 +275,7 @@ input[type='date'] { min-height: 42px; }
 .avatar {
   width: 36px; height: 36px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-  background: var(--emerald-500); color: var(--navy-900); font-weight: 700; font-size: 0.82rem;
+  background: #c8f34a; color: #080a0f; font-weight: 700; font-size: 0.82rem;
 }
 .logout:hover { background: rgba(208, 59, 59, 0.18); }
 .sidebar-scrim { display: none; }
@@ -252,12 +289,14 @@ input[type='date'] { min-height: 42px; }
   align-items: center;
   gap: 12px;
   padding: 14px 32px;
-  background: rgba(9, 11, 16, 0.88);
+  background: var(--topbar-bg);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
 .topbar-title { font-size: 1.3rem; font-weight: 700; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.theme-toggle { flex-shrink: 0; }
+.theme-toggle svg { color: var(--cobalt); }
 .menu-btn { display: none; }
 .content { padding: 28px 32px 48px; max-width: 1320px; width: 100%; }
 .page { display: flex; flex-direction: column; gap: 20px; }
@@ -542,6 +581,7 @@ input[type='date'] { min-height: 42px; }
 .preview-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
 .preview-bar div { height: 100%; background: var(--emerald-400); border-radius: 99px; }
 .auth-form-side { display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+.auth-theme-toggle { position: absolute; top: 20px; right: 20px; }
 .auth-card { width: 100%; max-width: 420px; }
 .auth-card h1 { font-size: 1.8rem; font-weight: 700; }
 .auth-card > p { margin: 6px 0 26px; }
@@ -566,6 +606,7 @@ input[type='date'] { min-height: 42px; }
   .filters { grid-template-columns: 1fr 1fr; }
   .filters .search-box { grid-column: 1 / -1; }
   .auth-page { grid-template-columns: 1fr; }
+  .auth-form-side { position: relative; }
   .auth-hero { padding: 28px 20px; gap: 24px; }
   .auth-hero-copy h2 { font-size: 1.7rem; }
   .auth-preview { display: none; }
@@ -574,6 +615,7 @@ input[type='date'] { min-height: 42px; }
   body { font-size: 14.5px; }
   .topbar-title { font-size: 1.1rem; }
   .topbar-actions { width: 100%; margin-left: 0; justify-content: space-between; order: 3; }
+  .theme-toggle { padding: 8px 10px; font-size: 0.82rem; }
   .hide-sm { display: none; }
   .month-picker-label { min-width: 104px; font-size: 0.86rem; }
   .summary-grid { gap: 12px; }
