@@ -22,7 +22,7 @@ A full-stack web app that helps university students record daily spending, set m
 - **Budgets**: an overall monthly budget plus per-category budgets, with remaining money, % used and status. Warnings appear at 80% and when a budget is exceeded, e.g. *"Warning: Your Food budget has been exceeded by ₩4,000."* You can also copy last month's budgets.
 - **Reports**: monthly summary, highest spending category, budget vs actual (chart and table), a 6- or 12-month trend, and **CSV export** (opens correctly in Excel).
 - **Month selector**: view any past or future month on Dashboard, Budgets and Reports.
-- **Appearance**: switch between dark and light mode from the header; the selected theme is remembered on this device.
+- **Appearance**: switch between dark and light mode from the header; the sidebar, category icons and charts adapt, and the selected theme is remembered on this device.
 - **Demo mode** (Settings): fills an *empty* account with clearly labelled `[Demo]` sample data for presentations. Real data is never hard-coded.
 
 Every number comes from the database. Adding, editing or deleting an expense immediately refreshes totals, budgets and charts.

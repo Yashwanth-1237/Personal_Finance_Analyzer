@@ -15,6 +15,16 @@ export const SERIES_COLORS = [
   '#a98bff', // violet
   '#ff6b73', // red
 ];
+export const LIGHT_SERIES_COLORS = [
+  '#345be8', // cobalt
+  '#58750d', // lime
+  '#087f76', // aqua
+  '#9a6000', // amber
+  '#bd416f', // pink
+  '#477d18', // green
+  '#6949c7', // violet
+  '#c43440', // red
+];
 export const FOLDED_COLOR = '#8993a4'; // 9th+ custom categories share a neutral grey
 
 const ICONS = {
@@ -32,12 +42,13 @@ export function iconFor(categoryName) {
 }
 
 /** Build a { category_id: color } map from the full category list (sorted by id). */
-export function buildColorMap(categories) {
+export function buildColorMap(categories, theme = 'dark') {
+  const colors = theme === 'light' ? LIGHT_SERIES_COLORS : SERIES_COLORS;
   const map = {};
   [...categories]
     .sort((a, b) => a.category_id - b.category_id)
     .forEach((c, index) => {
-      map[c.category_id] = SERIES_COLORS[index] || FOLDED_COLOR;
+      map[c.category_id] = colors[index] || FOLDED_COLOR;
     });
   return map;
 }

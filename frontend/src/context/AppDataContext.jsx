@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { api } from '../services/api';
 import { buildColorMap } from '../services/categoryStyle';
 import ExpenseFormModal from '../components/ExpenseFormModal';
+import { useTheme } from './ThemeContext';
 
 // Shared state for the logged-in area:
 //  - the month being viewed (used by Dashboard, Budgets, Reports)
@@ -11,6 +12,7 @@ import ExpenseFormModal from '../components/ExpenseFormModal';
 const AppDataContext = createContext(null);
 
 export function AppDataProvider({ children }) {
+  const { theme } = useTheme();
   const now = new Date();
   const [period, setPeriod] = useState({ month: now.getMonth() + 1, year: now.getFullYear() });
   const [categories, setCategories] = useState([]);
@@ -32,7 +34,7 @@ export function AppDataProvider({ children }) {
     loadCategories();
   }, [loadCategories, version]);
 
-  const colorMap = useMemo(() => buildColorMap(categories), [categories]);
+  const colorMap = useMemo(() => buildColorMap(categories, theme), [categories, theme]);
 
   const value = {
     period,
