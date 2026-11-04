@@ -14,7 +14,7 @@ services:
           name: personal-expense-analyzer-db
           property: connectionString
       - key: ENABLE_DEMO_SEED
-        value: "false"
+        value: "true"
       - key: SESSION_COOKIE_SECURE
         value: "true"
       - key: APP_BASE_URL

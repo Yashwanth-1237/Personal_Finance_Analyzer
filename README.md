@@ -41,6 +41,8 @@ and PostgreSQL database in the same region. To deploy:
    `SMTP_PASSWORD`, and `SMTP_FROM` in the Render web service's Environment page.
    Use an SMTP app password or provider credential, not your personal email password.
    Set `APP_BASE_URL` to the service URL shown by Render.
+5. Demo mode is enabled by the Blueprint. It only adds labelled sample data to an
+   empty account; redeploy after applying Blueprint changes.
 
 Receipt images are normalized, stored with their expense in PostgreSQL, and scanned
 for an amount/date using English and Korean Tesseract OCR. OCR suggestions should be
