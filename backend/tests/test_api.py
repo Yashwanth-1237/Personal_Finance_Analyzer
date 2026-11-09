@@ -16,7 +16,7 @@ DB_FILE = os.path.join(tempfile.gettempdir(), "expense_analyzer_test.db")
 os.environ["DATABASE_URL"] = f"sqlite:///{DB_FILE}"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import create_app  # noqa: E402
+from app import app as import_app, create_app  # noqa: E402
 from models import ExpenseReceipt, PasswordReset, db  # noqa: E402
 from receipts import _extract_amount, _extract_date  # noqa: E402
 
@@ -26,6 +26,9 @@ PERIOD = {"month": TODAY.month, "year": TODAY.year}
 
 class ExpenseAnalyzerTest(unittest.TestCase):
     def setUp(self):
+        # app.py builds an app at import time; release its SQLite handle so Windows can delete the file.
+        with import_app.app_context():
+            db.engine.dispose()
         if os.path.exists(DB_FILE):
             os.remove(DB_FILE)
         self.app = create_app()
@@ -205,6 +208,28 @@ class ExpenseAnalyzerTest(unittest.TestCase):
             "token": token, "password": "anotherpassword789"}).status_code, 400)
         self.assertEqual(self.client.post("/api/login", json={
             "email": "minji@wsu.ac.kr", "password": "newpassword456"}).status_code, 200)
+
+    def test_password_reset_without_smtp_dev_logs_link_prod_errors(self):
+        self.register()
+        self.app.config.update({"SMTP_HOST": "", "IS_PRODUCTION": False})
+        with self.assertLogs(self.app.logger, level="WARNING") as logs:
+            ok = self.client.post("/api/forgot-password", json={"email": "minji@wsu.ac.kr"})
+        self.assertEqual(ok.status_code, 200)
+        token = logs.output[0].split("token=")[1].strip()
+        # expire it, then it must be rejected
+        with self.app.app_context():
+            from datetime import timedelta
+            from models import utcnow
+            PasswordReset.query.update({"expires_at": utcnow() - timedelta(minutes=1)})
+            db.session.commit()
+        self.assertEqual(self.client.post("/api/reset-password", json={
+            "token": token, "password": "newpassword456"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/reset-password", json={
+            "token": "garbage", "password": "newpassword456"}).status_code, 400)
+        self.app.config["IS_PRODUCTION"] = True
+        bad = self.client.post("/api/forgot-password", json={"email": "minji@wsu.ac.kr"})
+        self.assertEqual(bad.status_code, 503)
+        self.assertEqual(bad.get_json()["error"], "Email service is not configured.")
 
     def test_receipt_image_is_private_and_scan_suggestions_are_returned(self):
         self.register()

@@ -257,7 +257,7 @@ Every endpoint except register/login/logout/forgot-password/reset-password requi
 | POST | `/api/register` | `{full_name, email, password}` → 201, logs in |
 | POST | `/api/login` | `{email, password}` → 200 / 401 |
 | POST | `/api/logout` | Ends the session |
-| POST | `/api/forgot-password` | `{email}`; emails a one-time reset link when SMTP is configured |
+| POST | `/api/forgot-password` | `{email}`; emails a one-time reset link. Without SMTP, local dev prints the link in the backend console; Render/Railway return 503 |
 | POST | `/api/reset-password` | `{token, password}`; consumes a valid, unexpired reset link |
 | GET | `/api/me` | Current user |
 | PUT | `/api/me` | Update `{full_name}` |

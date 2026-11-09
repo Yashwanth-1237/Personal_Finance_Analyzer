@@ -46,6 +46,10 @@ def start_session(user):
     session.permanent = True
 
 
+def smtp_configured():
+    return all(current_app.config.get(k) for k in ("SMTP_HOST", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD"))
+
+
 def send_password_reset_email(email, token):
     message = EmailMessage()
     message["Subject"] = "Reset your Personal Expense Analyzer password"
@@ -57,6 +61,10 @@ def send_password_reset_email(email, token):
         f"Use this one-time link within 30 minutes:\n{reset_url}\n\n"
         "If you did not request this, you can ignore this email."
     )
+    if not smtp_configured():
+        # Development only: no SMTP, so print the link on the server console instead of emailing it.
+        current_app.logger.warning("DEV password reset link for %s: %s", email, reset_url)
+        return
     with smtplib.SMTP(
         current_app.config["SMTP_HOST"],
         current_app.config["SMTP_PORT"],
@@ -90,9 +98,9 @@ def register():
 
 @auth_bp.post("/forgot-password")
 def forgot_password():
-    if not all(current_app.config.get(key) for key in ("SMTP_HOST", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD")):
+    if not smtp_configured() and current_app.config["IS_PRODUCTION"]:
         current_app.logger.error("Password reset email is unavailable: SMTP settings are incomplete.")
-        raise ApiError("Password reset email is not configured yet.", 503)
+        raise ApiError("Email service is not configured.", 503)
 
     data = get_json_body()
     email = (data.get("email") or "").strip().lower()

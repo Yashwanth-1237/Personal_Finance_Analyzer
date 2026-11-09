@@ -58,4 +58,6 @@ class Config:
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
     SMTP_FROM = os.getenv("SMTP_FROM", "")
     SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+    # Production = deployed on Railway/Render; there, missing SMTP is an error, not a console fallback.
+    IS_PRODUCTION = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER"))
     APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:5173")
