@@ -52,6 +52,8 @@ class Config:
     ENABLE_DEMO_SEED = os.getenv("ENABLE_DEMO_SEED", "true").lower() == "true"
 
     # SMTP is required for password-reset email delivery.
+    # Brevo HTTPS API: used instead of SMTP when set (Render free plan blocks SMTP ports).
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
     SMTP_HOST = os.getenv("SMTP_HOST", "")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")

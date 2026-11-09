@@ -37,10 +37,18 @@ and PostgreSQL database in the same region. To deploy:
 2. Review the services and select **Apply**. The Blueprint generates a session
    secret and connects the app to PostgreSQL automatically.
 3. After the deploy succeeds, open the web service and its `onrender.com` URL.
-4. To enable forgot-password emails, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
-   `SMTP_PASSWORD`, and `SMTP_FROM` in the Render web service's Environment page.
-   Use an SMTP app password or provider credential, not your personal email password.
-   Set `APP_BASE_URL` to the service URL shown by Render.
+4. To enable forgot-password emails, use Brevo's HTTPS API (Render's free plan blocks
+   SMTP ports 25/465/587). Create a free account at https://www.brevo.com, verify a
+   sender address (Senders & IP), and create an API key (SMTP & API → API Keys). Then
+   set these on the Render web service's Environment page:
+   - `BREVO_API_KEY`: the Brevo API key (starts with `xkeysib-`)
+   - `SMTP_FROM`: the verified sender address (e.g. `you@gmail.com`)
+   - `APP_BASE_URL`: the service URL shown by Render, e.g. `https://your-service.onrender.com`
+
+   Keep the key out of Git. Without `BREVO_API_KEY`, the app falls back to SMTP
+   (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`), which works
+   locally and on paid hosts. Locally with neither set, the reset link is printed in
+   the backend console.
 5. Demo mode is enabled by the Blueprint. It only adds labelled sample data to an
    empty account; redeploy after applying Blueprint changes.
 

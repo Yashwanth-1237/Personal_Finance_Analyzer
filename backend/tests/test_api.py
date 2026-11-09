@@ -2,6 +2,7 @@
 
 Run from the backend folder:   python -m unittest discover tests -v
 """
+import json
 import os
 import sys
 import tempfile
@@ -230,6 +231,21 @@ class ExpenseAnalyzerTest(unittest.TestCase):
         bad = self.client.post("/api/forgot-password", json={"email": "minji@wsu.ac.kr"})
         self.assertEqual(bad.status_code, 503)
         self.assertEqual(bad.get_json()["error"], "Email service is not configured.")
+
+    def test_password_reset_email_uses_brevo_api(self):
+        self.register()
+        self.app.config.update({"BREVO_API_KEY": "test-key", "SMTP_FROM": "sender@example.com",
+                                "APP_BASE_URL": "https://app.example.com", "IS_PRODUCTION": True})
+        with patch("routes.auth.urllib.request.urlopen") as urlopen:
+            response = self.client.post("/api/forgot-password", json={"email": "minji@wsu.ac.kr"})
+        self.assertEqual(response.status_code, 200)
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.brevo.com/v3/smtp/email")
+        self.assertEqual(request.get_header("Api-key"), "test-key")
+        body = json.loads(request.data)
+        self.assertEqual(body["to"], [{"email": "minji@wsu.ac.kr"}])
+        self.assertEqual(body["sender"]["email"], "sender@example.com")
+        self.assertIn("https://app.example.com/reset-password?token=", body["textContent"])
 
     def test_receipt_image_is_private_and_scan_suggestions_are_returned(self):
         self.register()

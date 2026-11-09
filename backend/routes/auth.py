@@ -4,6 +4,9 @@ import re
 import secrets
 import smtplib
 import ssl
+import json
+import urllib.error
+import urllib.request
 from datetime import timedelta
 from email.message import EmailMessage
 
@@ -47,6 +50,8 @@ def start_session(user):
 
 
 def smtp_configured():
+    if current_app.config.get("BREVO_API_KEY") and current_app.config.get("SMTP_FROM"):
+        return True
     return all(current_app.config.get(k) for k in ("SMTP_HOST", "SMTP_FROM", "SMTP_USERNAME", "SMTP_PASSWORD"))
 
 
@@ -61,6 +66,21 @@ def send_password_reset_email(email, token):
         f"Use this one-time link within 30 minutes:\n{reset_url}\n\n"
         "If you did not request this, you can ignore this email."
     )
+    if current_app.config.get("BREVO_API_KEY") and current_app.config.get("SMTP_FROM"):
+        request = urllib.request.Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=json.dumps({
+                "sender": {"email": current_app.config["SMTP_FROM"], "name": "Personal Expense Analyzer"},
+                "to": [{"email": email}],
+                "subject": message["Subject"],
+                "textContent": message.get_content(),
+            }).encode("utf-8"),
+            headers={"api-key": current_app.config["BREVO_API_KEY"],
+                     "content-type": "application/json", "accept": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=15):
+            return
     if not smtp_configured():
         # Development only: no SMTP, so print the link on the server console instead of emailing it.
         current_app.logger.warning("DEV password reset link for %s: %s", email, reset_url)
@@ -131,10 +151,11 @@ def forgot_password():
 
     try:
         send_password_reset_email(email, token)
-    except (OSError, smtplib.SMTPException):
+    except (OSError, smtplib.SMTPException, urllib.error.URLError) as exc:
         db.session.delete(reset)
         db.session.commit()
-        current_app.logger.error("Could not send password reset email.")
+        # Class name only: never log credentials, the token, or the provider's message.
+        current_app.logger.error("Could not send password reset email (%s).", type(exc).__name__)
         raise ApiError("Could not send the reset email. Please try again later.", 503)
 
     return jsonify({"message": RESET_MESSAGE})
